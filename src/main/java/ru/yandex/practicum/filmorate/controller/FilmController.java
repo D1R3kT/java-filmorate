@@ -15,7 +15,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/films")
 public class FilmController {
-    private final static Logger log = LoggerFactory.getLogger(FilmController.class);
+    private static final Logger log = LoggerFactory.getLogger(FilmController.class);
 
     private final Map<Long, Film> films = new HashMap<>();
 
@@ -46,12 +46,12 @@ public class FilmController {
         }
         film.setId(getNextId());
         films.put(film.getId(), film);
-        log.info("фильм добавлен: " + film.toString());
+        log.info("фильм добавлен: " + film);
         return film;
     }
 
     @PutMapping
-    public Film update (@RequestBody Film newFilm) {
+    public Film update(@RequestBody Film newFilm) {
         if (films.containsKey(newFilm.getId())) {
             Film oldFilm = films.get(newFilm.getId());
             if (newFilm.getId() == null) {
