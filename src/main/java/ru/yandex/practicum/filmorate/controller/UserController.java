@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -16,12 +15,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/users")
 public class UserController {
-    private final static Logger log = LoggerFactory.getLogger(UserController.class);
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final Map<Long, User> users = new HashMap<>();
 
     @GetMapping
-    public Collection<User> GetAll() {
+    public Collection<User> getAll() {
         log.info("Запрошен список всех пользователей");
         return users.values();
     }
@@ -46,7 +45,7 @@ public class UserController {
         }
         user.setId(getNextId());
         users.put(user.getId(), user);
-        log.info("Пользователь создан: " + user.toString());
+        log.info("Пользователь создан: " + user);
         return user;
     }
 
@@ -55,7 +54,7 @@ public class UserController {
         if (users.containsKey(newUser.getId())) {
             User oldUser = users.get(newUser.getId());
             // обновление поля email
-            if(newUser.getEmail() != null) {
+            if (newUser.getEmail() != null) {
                 oldUser.setEmail(newUser.getEmail());
             }
             if (newUser.getName() != null) {
