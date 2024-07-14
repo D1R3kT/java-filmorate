@@ -4,7 +4,6 @@ package ru.yandex.practicum.filmorate.controller;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.util.Assert.*;
 import ru.yandex.practicum.filmorate.excepion.ConditionsMetException;
 import ru.yandex.practicum.filmorate.excepion.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
