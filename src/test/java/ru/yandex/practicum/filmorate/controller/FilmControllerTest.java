@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.excepion.ConditionsMetException;
 import ru.yandex.practicum.filmorate.excepion.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.time.LocalDate;
 
@@ -15,14 +16,14 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Name")
     void shouldCreateFilmWithoutName() {
-        FilmController filmController = new FilmController();
+        FilmService filmService = new FilmService();
         Film film = new Film();
         film.setDescription("Description");
         film.setReleaseDate(LocalDate.of(2023, 10, 10));
         film.setDuration(Long.valueOf(200));
 
         try {
-            filmController.create(film);
+            filmService.create(film);
         } catch (ConditionsMetException exp) {
             Assertions.assertEquals("название не может быть пустым", exp.getMessage());
         }
@@ -32,7 +33,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Description length")
     void shouldCreateFilmWithDescription() {
-        FilmController filmController = new FilmController();
+        FilmService filmService = new FilmService();
         Film film = new Film();
         film.setName("Name");
         film.setDescription("qweqweqweqweqweqweqeqweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqe" +
@@ -42,7 +43,7 @@ public class FilmControllerTest {
         film.setDuration(Long.valueOf(200));
 
         try {
-            filmController.create(film);
+            filmService.create(film);
         } catch (ConditionsMetException exp) {
             Assertions.assertEquals("максимальная длина описания - 200 символов", exp.getMessage());
         }
@@ -51,7 +52,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Release Date")
     void shouldCreateFilmWithDateBefore1895() {
-        FilmController filmController = new FilmController();
+        FilmService filmService = new FilmService();
         Film film = new Film();
         film.setName("Name");
         film.setDescription("Description");
@@ -59,7 +60,7 @@ public class FilmControllerTest {
         film.setDuration(Long.valueOf(200));
 
         try {
-            filmController.create(film);
+            filmService.create(film);
         } catch (ConditionsMetException exp) {
             Assertions.assertEquals("дата релиза - не раньше 28 декабря 1895 года", exp.getMessage());
         }
@@ -68,7 +69,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Duration")
     void shouldCreateFilmWithNegativeDuration() {
-        FilmController filmController = new FilmController();
+        FilmService filmService = new FilmService();
         Film film = new Film();
         film.setName("Name");
         film.setDescription("Description");
@@ -76,7 +77,7 @@ public class FilmControllerTest {
         film.setDuration(Long.valueOf(-200));
 
         try {
-            filmController.create(film);
+            filmService.create(film);
         } catch (ConditionsMetException exp) {
             Assertions.assertEquals("продолжительность фильма должна быть положительным числом", exp.getMessage());
         }
@@ -86,10 +87,10 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Update film")
     void shouldUpdateFilmWithoutId() {
-        FilmController filmController = new FilmController();
+        FilmService filmService = new FilmService();
         Film film = new Film();
         try {
-            filmController.update(film);
+            filmService.update(film);
         } catch (NotFoundException exp) {
             Assertions.assertEquals("фильм с id = " + film.getId() + " не найден", exp.getMessage());
         }
