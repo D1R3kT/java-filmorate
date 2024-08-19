@@ -3,19 +3,20 @@ package ru.yandex.practicum.filmorate.controller;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import ru.yandex.practicum.filmorate.excepion.NotFoundException;
-import ru.yandex.practicum.filmorate.excepion.ValidationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.repository.UserRepository;
 
 import java.time.LocalDate;
+
 
 public class UserControllerTest {
 
     @Test
     @DisplayName("Name")
     void shouldCreateUserWithoutName() {
-        UserService userService = new UserService();
+        UserRepository userService = new UserRepository();
         User user = new User();
         user.setEmail("email@mail.com");
         user.setLogin("Login");
@@ -28,7 +29,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("Email")
     void shouldCreateUserWithWrongEmail() {
-        UserService userService = new UserService();
+        UserRepository userService = new UserRepository();
         User user = new User();
         user.setEmail("emailmail.com");
         user.setLogin("Login");
@@ -36,8 +37,9 @@ public class UserControllerTest {
 
         try {
             userService.createUser(user);
-        } catch (ValidationException exp) {
-            Assertions.assertEquals("электронная почта не может быть пустой и должна содержать символ @",
+        } catch (ResponseStatusException exp) {
+            Assertions.assertEquals(HttpStatus.BAD_REQUEST +
+                            " \"электронная почта не может быть пустой и должна содержать символ @\"",
                     exp.getMessage());
         }
     }
@@ -45,15 +47,16 @@ public class UserControllerTest {
     @Test
     @DisplayName("Login")
     void shouldCreateUserWithoutLogin() {
-        UserService userService = new UserService();
+        UserRepository userService = new UserRepository();
         User user = new User();
         user.setEmail("email@mail.com");
         user.setBirthday(LocalDate.of(2000, 10, 10));
 
         try {
             userService.createUser(user);
-        } catch (ValidationException exp) {
-            Assertions.assertEquals("логин не может быть пустым и не должен содержать пробелы",
+        } catch (ResponseStatusException exp) {
+            Assertions.assertEquals(HttpStatus.BAD_REQUEST +
+                            " \"логин не может быть пустым и не должен содержать пробелы\"",
                     exp.getMessage());
         }
     }
@@ -61,7 +64,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("Birthday")
     void shouldCreateUserWithWrongBDay() {
-        UserService userService = new UserService();
+        UserRepository userService = new UserRepository();
         User user = new User();
         user.setLogin("Login");
         user.setEmail("email@mail.com");
@@ -69,21 +72,23 @@ public class UserControllerTest {
 
         try {
             userService.createUser(user);
-        } catch (ValidationException exp) {
-            Assertions.assertEquals("дата рождения не может быть в будущем", exp.getMessage());
+        } catch (ResponseStatusException exp) {
+            Assertions.assertEquals(HttpStatus.BAD_REQUEST +
+                    " \"дата рождения не может быть в будущем\"", exp.getMessage());
         }
     }
 
     @Test
     @DisplayName("Update User without Id")
     void shouldUpdateUserWithoutId() {
-        UserService userService = new UserService();
+        UserRepository userService = new UserRepository();
         User user = new User();
 
         try {
             userService.update(user);
-        } catch (NotFoundException exp) {
-            Assertions.assertEquals("Пользователь с id = " + user.getId() + " не найден", exp.getMessage());
+        } catch (ResponseStatusException exp) {
+            Assertions.assertEquals(HttpStatus.NOT_FOUND +
+                    " \"Пользователь с id = " + user.getId() + " не найден\"", exp.getMessage());
         }
     }
 }

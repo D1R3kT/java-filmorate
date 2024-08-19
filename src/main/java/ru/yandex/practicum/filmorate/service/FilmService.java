@@ -2,85 +2,90 @@ package ru.yandex.practicum.filmorate.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.excepion.ConditionsMetException;
-import ru.yandex.practicum.filmorate.excepion.NotFoundException;
+import ru.yandex.practicum.filmorate.excepion.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.repository.FilmRepository;
+import ru.yandex.practicum.filmorate.repository.UserRepository;
 
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-@Service
+import static java.util.stream.Collectors.toMap;
+
+@Component
 public class FilmService {
 
     private static final Logger log = LoggerFactory.getLogger(FilmController.class);
 
-    private final Map<Long, Film> films = new HashMap<>();
 
-    public Collection<Film> getAll() {
-        log.info("Запрошен список всех фильмов");
-        return films.values();
-    }
+    private final Map<Long, Set<Long>> likes = new HashMap<>();
+    private final UserRepository userRepository;
+    private final FilmRepository filmRepository;
 
-    public Film create(Film film) {
-        if (film.getName() == null || film.getName().isBlank()) {
-            log.error("name = null");
-            throw new ConditionsMetException("название не может быть пустым");
-
-        }
-        if (film.getDescription().length() > 200) {
-            log.error("Description.length > 200");
-            throw new ConditionsMetException("максимальная длина описания - 200 символов");
-        }
-        if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
-            log.error("Release date is before 1895");
-            throw new ConditionsMetException("дата релиза - не раньше 28 декабря 1895 года");
-        }
-        if (film.getDuration() < 0) {
-            log.error("Duration is negative");
-            throw new ConditionsMetException("продолжительность фильма должна быть положительным числом");
-        }
-        film.setId(getNextId());
-        films.put(film.getId(), film);
-        log.info("фильм добавлен: " + film);
-        return film;
-    }
-
-    public Film update(Film newFilm) {
-        if (films.containsKey(newFilm.getId())) {
-            Film oldFilm = films.get(newFilm.getId());
-            if (newFilm.getId() == null) {
-                log.error("id = null");
-                throw new ConditionsMetException("id должен быть указан");
-            }
-            if (newFilm.getName() != null || newFilm.getName().isBlank()) {
-                oldFilm.setName(newFilm.getName());
-            }
-            if (newFilm.getDescription() != null && newFilm.getDescription().length() < 200) {
-                oldFilm.setDescription(newFilm.getDescription());
-            }
-            if (newFilm.getDuration() != null && newFilm.getDuration() > 0) {
-                oldFilm.setDuration(newFilm.getDuration());
-            }
-            if (newFilm.getReleaseDate() != null && newFilm.getReleaseDate().isAfter(LocalDate.of(1895, 12, 28))) {
-                oldFilm.setReleaseDate(newFilm.getReleaseDate());
-            }
-            log.info("фильм обновлен: " + oldFilm.toString());
-            return oldFilm;
-        }
-        throw new NotFoundException("фильм с id = " + newFilm.getId() + " не найден");
+    public FilmService(UserRepository userRepository, FilmRepository filmRepository) {
+        this.userRepository = userRepository;
+        this.filmRepository = filmRepository;
     }
 
 
-    private long getNextId() {
-        long currentMaxId = films.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    //  поставить лайк
+    public void addLike(Long filmId, Long userId) {
+        if (filmRepository.getFilm(filmId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Фильм с id = " + filmId + " не найден");
+        }
+        if (userRepository.getUser(userId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "пользователь с id = " + userId + " не найден");
+        }
+        Set<Long> usersLike = likes.computeIfAbsent(userId, id -> new HashSet<>());
+        usersLike.add(userId);
+        likes.put(filmId, usersLike);
+
     }
+
+    //  удалить лайк
+    public void removeLike(Long filmId, Long userId) {
+        if (filmRepository.getFilm(filmId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Фильм с id = " + filmId + " не найден");
+        }
+        if (userRepository.getUser(userId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "пользователь с id = " + userId + " не найден");
+        }
+        Set<Long> usersLikes = likes.get(filmId);
+        usersLikes.remove(userId);
+        likes.put(filmId, usersLikes);
+    }
+
+    //  вывести список фильмов в количестве count
+    public Set<Film> getTopFilms(int count) {
+        if (count < 0) {
+            throw new ValidationException("Количество фильмов не может быть отрицательным");
+        }
+        Set<Film> topFilms = new HashSet<>();
+        Map<Long, Set<Long>> sorted = likes.entrySet().stream()
+                .sorted(Comparator.comparingInt(e -> e.getValue().size()))
+                .limit(count)
+                .collect(toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> {
+                            throw new AssertionError();
+                        },
+                        LinkedHashMap::new
+                ));
+        for (Long id : sorted.keySet()) {
+            topFilms.add(filmRepository.getFilm(id));
+        }
+        return topFilms;
+    }
+
+
 }
