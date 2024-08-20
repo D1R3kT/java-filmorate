@@ -1,9 +1,11 @@
 package ru.yandex.practicum.filmorate.service;
 
+import org.apache.logging.log4j.util.PropertySource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.excepion.ValidationException;
@@ -12,8 +14,9 @@ import ru.yandex.practicum.filmorate.repository.FilmRepository;
 import ru.yandex.practicum.filmorate.repository.UserRepository;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toMap;
+import static java.util.Comparator.*;
 
 @Component
 public class FilmService {
@@ -30,8 +33,6 @@ public class FilmService {
         this.filmRepository = filmRepository;
     }
 
-
-    //  поставить лайк
     public void addLike(Long filmId, Long userId) {
         if (filmRepository.getFilm(filmId) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -41,13 +42,11 @@ public class FilmService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "пользователь с id = " + userId + " не найден");
         }
-        Set<Long> usersLike = likes.computeIfAbsent(userId, id -> new HashSet<>());
+        Set<Long> usersLike = likes.computeIfAbsent(filmId, id -> new HashSet<>());
         usersLike.add(userId);
         likes.put(filmId, usersLike);
-
     }
 
-    //  удалить лайк
     public void removeLike(Long filmId, Long userId) {
         if (filmRepository.getFilm(filmId) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -62,28 +61,19 @@ public class FilmService {
         likes.put(filmId, usersLikes);
     }
 
-    //  вывести список фильмов в количестве count
-    public Set<Film> getTopFilms(int count) {
-        if (count < 0) {
-            throw new ValidationException("Количество фильмов не может быть отрицательным");
+    public Collection<Film> getTopFilms(int count) {
+        if (count < 1) {
+            throw new ValidationException("некорректное число");
         }
-        Set<Film> topFilms = new HashSet<>();
-        Map<Long, Set<Long>> sorted = likes.entrySet().stream()
-                .sorted(Comparator.comparingInt(e -> e.getValue().size()))
+        return likes.entrySet().stream()
+                .sorted(Comparator.comparing(e -> e.getValue().size(), reverseOrder()))
+                .map(entry -> filmRepository.getFilm(entry.getKey()))
                 .limit(count)
-                .collect(toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (a, b) -> {
-                            throw new AssertionError();
-                        },
-                        LinkedHashMap::new
-                ));
-        for (Long id : sorted.keySet()) {
-            topFilms.add(filmRepository.getFilm(id));
-        }
-        return topFilms;
+                .collect(Collectors.toList());
     }
-
-
 }
+
+
+
+
+

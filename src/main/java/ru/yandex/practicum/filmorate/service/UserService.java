@@ -14,16 +14,13 @@ import java.util.*;
 @Component
 public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
-
+    private final Map<Long, Set<Long>> friends = new HashMap<>();
     private final UserRepository userRepository;
 
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-    private final Map<Long, Set<Long>> friends = new HashMap<>();
-
-    //  добавление в друзья
     public void addFriend(Long userId, Long friendId) {
         if (userRepository.getUser(userId) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -41,17 +38,21 @@ public class UserService {
         friends.put(friendId, fFriendsId);
     }
 
-    //  вывод списка друзей пользователя
-    public Set<Long> getAllFriend(Long userId) {
+    public Set<User> getAllFriend(Long userId) {
         if (userRepository.getUser(userId) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "пользователь с id = " + userId + "не найден");
         }
         Set<Long> uFriendsId = friends.computeIfAbsent(userId, id -> new HashSet<>());
-        return uFriendsId;
+        Set<User> allFriends = new HashSet<>();
+
+        for (Long id : uFriendsId) {
+            allFriends.add(userRepository.getUser(id));
+        }
+
+        return allFriends;
     }
 
-    //  удаление из друзей
     public void removeFriend(Long userId, Long friendId) {
         if (userRepository.getUser(userId) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -82,6 +83,4 @@ public class UserService {
         }
         return commonFriends;
     }
-
-
 }

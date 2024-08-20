@@ -6,7 +6,6 @@ import ru.yandex.practicum.filmorate.repository.UserRepository;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 
 @RestController
@@ -39,11 +38,10 @@ public class UserController {
     @PutMapping("/{id}/friends/{friendId}")
     public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         userService.addFriend(id, friendId);
-        Set<Long> res = new HashSet<>();
     }
 
     @GetMapping("/{id}/friends")
-    public Set<Long> getAllFriends(@PathVariable Long id) {
+    public Set<User> getAllFriends(@PathVariable Long id) {
         return userService.getAllFriend(id);
     }
 
