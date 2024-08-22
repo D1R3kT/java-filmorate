@@ -2,7 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.repository.UserRepository;
+import ru.yandex.practicum.filmorate.repository.InMemoryUserRepository;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.Collection;
@@ -13,9 +13,9 @@ import java.util.Set;
 public class UserController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
+    private final InMemoryUserRepository userRepository;
 
-    public UserController(UserService userService, UserRepository userRepository) {
+    public UserController(UserService userService, InMemoryUserRepository userRepository) {
         this.userService = userService;
         this.userRepository = userRepository;
     }
@@ -54,5 +54,4 @@ public class UserController {
     public Set<User> getCommonFriends(@PathVariable Long id, @PathVariable Long otherId) {
         return userService.getCommonFriends(id, otherId);
     }
-
 }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.repository.InMemoryUserRepository;
 import ru.yandex.practicum.filmorate.repository.UserRepository;
 
 import java.time.LocalDate;
@@ -16,7 +17,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("Name")
     void shouldCreateUserWithoutName() {
-        UserRepository userService = new UserRepository();
+        UserRepository userService = new InMemoryUserRepository();
         User user = new User();
         user.setEmail("email@mail.com");
         user.setLogin("Login");
@@ -29,7 +30,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("Email")
     void shouldCreateUserWithWrongEmail() {
-        UserRepository userService = new UserRepository();
+        UserRepository userService = new InMemoryUserRepository();
         User user = new User();
         user.setEmail("emailmail.com");
         user.setLogin("Login");
@@ -47,7 +48,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("Login")
     void shouldCreateUserWithoutLogin() {
-        UserRepository userService = new UserRepository();
+        UserRepository userService = new InMemoryUserRepository();
         User user = new User();
         user.setEmail("email@mail.com");
         user.setBirthday(LocalDate.of(2000, 10, 10));
@@ -64,7 +65,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("Birthday")
     void shouldCreateUserWithWrongBDay() {
-        UserRepository userService = new UserRepository();
+        UserRepository userService = new InMemoryUserRepository();
         User user = new User();
         user.setLogin("Login");
         user.setEmail("email@mail.com");
@@ -81,7 +82,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("Update User without Id")
     void shouldUpdateUserWithoutId() {
-        UserRepository userService = new UserRepository();
+        UserRepository userService = new InMemoryUserRepository();
         User user = new User();
 
         try {

@@ -2,7 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.repository.FilmRepository;
+import ru.yandex.practicum.filmorate.repository.InMemoryFilmRepository;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.Collection;
@@ -11,9 +11,9 @@ import java.util.Collection;
 @RequestMapping("/films")
 public class FilmController {
     private final FilmService filmService;
-    private final FilmRepository filmRepository;
+    private final InMemoryFilmRepository filmRepository;
 
-    public FilmController(FilmService filmService, FilmRepository filmRepository) {
+    public FilmController(FilmService filmService, InMemoryFilmRepository filmRepository) {
         this.filmService = filmService;
         this.filmRepository = filmRepository;
     }

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.repository.FilmRepository;
+import ru.yandex.practicum.filmorate.repository.InMemoryFilmRepository;
 
 import java.time.LocalDate;
 
@@ -16,7 +17,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Name")
     void shouldCreateFilmWithoutName() {
-        FilmRepository filmService = new FilmRepository();
+        FilmRepository filmService = new InMemoryFilmRepository();
         Film film = new Film();
         film.setDescription("Description");
         film.setReleaseDate(LocalDate.of(2023, 10, 10));
@@ -34,7 +35,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Description length")
     void shouldCreateFilmWithDescription() {
-        FilmRepository filmService = new FilmRepository();
+        FilmRepository filmService = new InMemoryFilmRepository();
         Film film = new Film();
         film.setName("Name");
         film.setDescription("qweqweqweqweqweqweqeqweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqweqe" +
@@ -54,7 +55,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Release Date")
     void shouldCreateFilmWithDateBefore1895() {
-        FilmRepository filmService = new FilmRepository();
+        FilmRepository filmService = new InMemoryFilmRepository();
         Film film = new Film();
         film.setName("Name");
         film.setDescription("Description");
@@ -72,7 +73,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Duration")
     void shouldCreateFilmWithNegativeDuration() {
-        FilmRepository filmService = new FilmRepository();
+        FilmRepository filmService = new InMemoryFilmRepository();
         Film film = new Film();
         film.setName("Name");
         film.setDescription("Description");
@@ -91,7 +92,7 @@ public class FilmControllerTest {
     @Test
     @DisplayName("Update film")
     void shouldUpdateFilmWithoutId() {
-        FilmRepository filmService = new FilmRepository();
+        FilmRepository filmService = new InMemoryFilmRepository();
         Film film = new Film();
         try {
             filmService.update(film);
