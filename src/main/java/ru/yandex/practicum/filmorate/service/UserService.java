@@ -2,79 +2,85 @@ package ru.yandex.practicum.filmorate.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.controller.UserController;
-import ru.yandex.practicum.filmorate.excepion.NotFoundException;
-import ru.yandex.practicum.filmorate.excepion.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.repository.UserRepository;
 
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-@Service
+@Component
 public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
+    private final Map<Long, Set<Long>> friends = new HashMap<>();
+    private final UserRepository userRepository;
 
-    private final Map<Long, User> users = new HashMap<>();
-
-    public Collection<User> getAll() {
-        log.info("Запрошен список всех пользователей");
-        return users.values();
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    public User createUser(User user) {
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            log.error("email = null or not found @");
-            throw new ValidationException("электронная почта не может быть пустой и должна содержать символ @");
+    public void addFriend(Long userId, Long friendId) {
+        if (userRepository.getUser(userId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "пользователь с id = " + userId + " не найден");
+        } else if (userRepository.getUser(friendId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "пользователь с id = " + friendId + " не найден");
         }
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            log.error("login = null");
-            throw new ValidationException("логин не может быть пустым и не должен содержать пробелы");
-        }
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
-            log.error("Birthday in the future");
-            throw new ValidationException("дата рождения не может быть в будущем");
-        }
-        user.setId(getNextId());
-        users.put(user.getId(), user);
-        log.info("Пользователь создан: " + user);
-        return user;
+        Set<Long> uFriendsId = friends.computeIfAbsent(userId, id -> new HashSet<>());
+        uFriendsId.add(friendId);
+        friends.put(userId, uFriendsId);
+
+        Set<Long> fFriendsId = friends.computeIfAbsent(friendId, id -> new HashSet<>());
+        fFriendsId.add(userId);
+        friends.put(friendId, fFriendsId);
     }
 
-    public User update(User newUser) {
-        if (users.containsKey(newUser.getId())) {
-            User oldUser = users.get(newUser.getId());
-            // обновление поля email
-            if (newUser.getEmail() != null) {
-                oldUser.setEmail(newUser.getEmail());
-            }
-            if (newUser.getName() != null) {
-                oldUser.setName(newUser.getName());
-            }
-            if (newUser.getLogin() != null) {
-                oldUser.setLogin(newUser.getLogin());
-            }
-            if (newUser.getBirthday() != null && newUser.getBirthday().isBefore(LocalDate.now())) {
-                oldUser.setBirthday(newUser.getBirthday());
-            }
-            log.info("Пользователь обновлён: " + oldUser.toString());
-            return oldUser;
+    public Set<User> getAllFriend(Long userId) {
+        if (userRepository.getUser(userId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "пользователь с id = " + userId + "не найден");
         }
-        log.error("user with id = " + newUser.getId() + " not found");
-        throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
+        Set<Long> uFriendsId = friends.computeIfAbsent(userId, id -> new HashSet<>());
+        Set<User> allFriends = new HashSet<>();
+
+        for (Long id : uFriendsId) {
+            allFriends.add(userRepository.getUser(id));
+        }
+
+        return allFriends;
     }
 
-    private long getNextId() {
-        long currentMaxId = users.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    public void removeFriend(Long userId, Long friendId) {
+        if (userRepository.getUser(userId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "пользователь с id = " + userId + " не найден");
+        }
+        if (userRepository.getUser(friendId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "пользователь с id = " + friendId + " не найден");
+        }
+        Set<Long> uFriendsId = friends.computeIfAbsent(userId, id -> new HashSet<>());
+        uFriendsId.remove(friendId);
+        friends.put(userId, uFriendsId);
+
+        Set<Long> fFriendsId = friends.computeIfAbsent(friendId, id -> new HashSet<>());
+        fFriendsId.remove(userId);
+        friends.put(friendId, fFriendsId);
+    }
+
+    public Set<User> getCommonFriends(Long userId, Long friendId) {
+        Set<Long> uFriendsId = friends.get(userId);
+        Set<Long> fFriendsId = friends.get(friendId);
+
+        Set<User> commonFriends = new HashSet<>();
+        for (Long id : fFriendsId) {
+            if (uFriendsId.contains(id)) {
+                commonFriends.add(userRepository.getUser(id));
+            }
+        }
+        return commonFriends;
     }
 }
