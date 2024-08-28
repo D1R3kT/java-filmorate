@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.Collection;
 
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -14,6 +15,6 @@ public class Film {
     String description;
     LocalDate releaseDate;
     Long duration;
-
-
+    Mpa mpa;
+    Collection<Genre> genres;
 }

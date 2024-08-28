@@ -1,86 +1,92 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-import ru.yandex.practicum.filmorate.controller.UserController;
+import ru.yandex.practicum.filmorate.dal.JdbcUserRepository;
+import ru.yandex.practicum.filmorate.excepion.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.repository.UserRepository;
 
 import java.util.*;
 
 @Component
+@Slf4j
 public class UserService {
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
-    private final Map<Long, Set<Long>> friends = new HashMap<>();
-    private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    private final JdbcUserRepository jdbcUserRepository;
+
+    public UserService(JdbcUserRepository jdbcUserRepository) {
+        this.jdbcUserRepository = jdbcUserRepository;
     }
 
-    public void addFriend(Long userId, Long friendId) {
-        if (userRepository.getUser(userId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "пользователь с id = " + userId + " не найден");
-        } else if (userRepository.getUser(friendId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "пользователь с id = " + friendId + " не найден");
-        }
-        Set<Long> uFriendsId = friends.computeIfAbsent(userId, id -> new HashSet<>());
-        uFriendsId.add(friendId);
-        friends.put(userId, uFriendsId);
-
-        Set<Long> fFriendsId = friends.computeIfAbsent(friendId, id -> new HashSet<>());
-        fFriendsId.add(userId);
-        friends.put(friendId, fFriendsId);
+    public Collection<User> getAllUsers() {
+        return jdbcUserRepository.findAll();
     }
 
-    public Set<User> getAllFriend(Long userId) {
-        if (userRepository.getUser(userId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "пользователь с id = " + userId + "не найден");
-        }
-        Set<Long> uFriendsId = friends.computeIfAbsent(userId, id -> new HashSet<>());
-        Set<User> allFriends = new HashSet<>();
-
-        for (Long id : uFriendsId) {
-            allFriends.add(userRepository.getUser(id));
-        }
-
-        return allFriends;
+    public Optional<User> getUser(final Long userId) {
+        return jdbcUserRepository.findById(userId);
     }
 
-    public void removeFriend(Long userId, Long friendId) {
-        if (userRepository.getUser(userId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "пользователь с id = " + userId + " не найден");
+    public Optional<User> createUser(final User user) {
+        Objects.requireNonNull(user, "user must not be null");
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email must not be empty");
         }
-        if (userRepository.getUser(friendId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "пользователь с id = " + friendId + " не найден");
+        if (user.getLogin() == null || user.getLogin().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "login must not be empty");
         }
-        Set<Long> uFriendsId = friends.computeIfAbsent(userId, id -> new HashSet<>());
-        uFriendsId.remove(friendId);
-        friends.put(userId, uFriendsId);
-
-        Set<Long> fFriendsId = friends.computeIfAbsent(friendId, id -> new HashSet<>());
-        fFriendsId.remove(userId);
-        friends.put(friendId, fFriendsId);
+        if (user.getName() == null || user.getName().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name must not be empty");
+        }
+        final User newUser = jdbcUserRepository.save(user);
+        log.info("Created new user: {}", newUser);
+        return Optional.of(newUser);
     }
 
-    public Set<User> getCommonFriends(Long userId, Long friendId) {
-        Set<Long> uFriendsId = friends.get(userId);
-        Set<Long> fFriendsId = friends.get(friendId);
-
-        Set<User> commonFriends = new HashSet<>();
-        for (Long id : fFriendsId) {
-            if (uFriendsId.contains(id)) {
-                commonFriends.add(userRepository.getUser(id));
-            }
+    public Optional<User> updateUser(final User user) {
+        Objects.requireNonNull(user, "user must not be null");
+        if (jdbcUserRepository.findById(user.getId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "user not found");
         }
-        return commonFriends;
+
+        final Optional<User> existingUser = jdbcUserRepository.update(user);
+        existingUser.ifPresent(u -> log.info("Updated user: {}", u));
+        return existingUser;
+    }
+
+    public void addFriend(final Long userId, final Long friendId) {
+        if (Objects.equals(userId, friendId)) {
+            throw new ValidationException("id не должны совпадать");
+        }
+        if (jdbcUserRepository.findById(userId).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "user not found");
+        }
+        if (jdbcUserRepository.findById(friendId).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "friend not found");
+        }
+        jdbcUserRepository.addFriend(userId, friendId);
+    }
+
+    public void removeFriend(final Long userId, final Long friendId) {
+
+        if (jdbcUserRepository.findById(userId).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "user not found");
+        }
+        if (jdbcUserRepository.findById(friendId).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "friend not found");
+        }
+        jdbcUserRepository.removeFriend(userId, friendId);
+    }
+
+    public Collection<User> getFriends(final Long userId) {
+        if (jdbcUserRepository.findById(userId).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "user not found");
+        }
+        return jdbcUserRepository.getFriends(userId);
+    }
+
+    public Collection<User> getCommonFriends(final Long userId, final Long friendId) {
+        return jdbcUserRepository.findCommonFriends(userId, friendId);
     }
 }
