@@ -6,18 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
-import ru.yandex.practicum.filmorate.dal.JdbcFilmRepository;
-import ru.yandex.practicum.filmorate.dal.JdbcGenreRepository;
-import ru.yandex.practicum.filmorate.dal.JdbcMpaRepository;
 import ru.yandex.practicum.filmorate.dal.JdbcUserRepository;
-import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.GenreRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.MpaRowMapper;
 import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.User;
 import org.junit.jupiter.api.Assertions;
-import org.springframework.jdbc.core.RowMapper;
-import ru.yandex.practicum.filmorate.repository.UserRepository;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
@@ -34,7 +27,6 @@ public class JdbcUserRepositoryTest {
     public static final long TEST_FRIEND_ID = 2;
     public static final long TEST_FRIEND_ID2 = 3;
     private final JdbcUserRepository userRepository;
-
 
 
     static User getTestUser() {
@@ -63,13 +55,13 @@ public class JdbcUserRepositoryTest {
     @Test
     @DisplayName("Должен находить пользователя по id")
     public void should_return_user_when_find_by_id() {
-         Optional<User> userOptional = userRepository.findById(TEST_USER_ID);
+        Optional<User> userOptional = userRepository.findById(TEST_USER_ID);
 
-         assertThat(userOptional)
-                 .isPresent()
-                 .get()
-                 .usingRecursiveComparison()
-                 .isEqualTo(getTestUser());
+        assertThat(userOptional)
+                .isPresent()
+                .get()
+                .usingRecursiveComparison()
+                .isEqualTo(getTestUser());
     }
 
     @Test
