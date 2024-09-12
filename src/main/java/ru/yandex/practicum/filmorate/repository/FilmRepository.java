@@ -3,15 +3,19 @@ package ru.yandex.practicum.filmorate.repository;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.util.Collection;
+import java.util.Optional;
 
 public interface FilmRepository {
-    Collection<Film> getAll();
+    Collection<Film> findAll();
 
-    Film getFilm(Long id);
+    Optional<Film> findById(final long id);
 
-    Film create(Film film);
+    Film save(final Film film);
 
-    Film update(Film newFilm);
+    Optional<Film> update(final Film film);
 
-    void removeFilm(Long id);
+    void addLike(long id, long userId);
+
+    void deleteLike(long id, long userId);
+
 }

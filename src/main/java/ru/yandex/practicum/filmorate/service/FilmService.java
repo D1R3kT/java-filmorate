@@ -1,73 +1,103 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-import ru.yandex.practicum.filmorate.controller.FilmController;
-import ru.yandex.practicum.filmorate.excepion.ValidationException;
+import ru.yandex.practicum.filmorate.dal.JdbcFilmRepository;
+import ru.yandex.practicum.filmorate.excepion.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.repository.FilmRepository;
-import ru.yandex.practicum.filmorate.repository.UserRepository;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.User;
 
+import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static java.util.Comparator.*;
 
 @Component
 public class FilmService {
 
-    private static final Logger log = LoggerFactory.getLogger(FilmController.class);
+    private final JdbcFilmRepository jdbcFilmRepository;
+    private final UserService userService;
+    private final MpaService mpaService;
+    private final GenreService genreService;
 
 
-    private final Map<Long, Set<Long>> likes = new HashMap<>();
-    private final UserRepository userRepository;
-    private final FilmRepository filmRepository;
-
-    public FilmService(UserRepository userRepository, FilmRepository filmRepository) {
-        this.userRepository = userRepository;
-        this.filmRepository = filmRepository;
+    public FilmService(final JdbcFilmRepository jdbcFilmRepository,
+                       final UserService userService, MpaService mpaService, GenreService genreService) {
+        this.jdbcFilmRepository = jdbcFilmRepository;
+        this.userService = userService;
+        this.mpaService = mpaService;
+        this.genreService = genreService;
     }
 
-    public void addLike(Long filmId, Long userId) {
-        if (filmRepository.getFilm(filmId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Фильм с id = " + filmId + " не найден");
-        }
-        if (userRepository.getUser(userId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "пользователь с id = " + userId + " не найден");
-        }
-        Set<Long> usersLike = likes.computeIfAbsent(filmId, id -> new HashSet<>());
-        usersLike.add(userId);
-        likes.put(filmId, usersLike);
+    public Collection<Film> getFilms() {
+        return jdbcFilmRepository.findAll();
     }
 
-    public void removeLike(Long filmId, Long userId) {
-        if (filmRepository.getFilm(filmId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Фильм с id = " + filmId + " не найден");
-        }
-        if (userRepository.getUser(userId) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "пользователь с id = " + userId + " не найден");
-        }
-        Set<Long> usersLikes = likes.get(filmId);
-        usersLikes.remove(userId);
-        likes.put(filmId, usersLikes);
+    public Collection<Film> getTopFilmsByLikes(final long limit) {
+        return jdbcFilmRepository.findAllOrderByLikesDesc(limit);
     }
 
-    public Collection<Film> getTopFilms(int count) {
-        if (count < 1) {
-            throw new ValidationException("некорректное число");
+    public Optional<Film> getFilm(final long id) {
+        return jdbcFilmRepository.findById(id);
+    }
+
+    public Film createFilm(final Film film) {
+        Objects.requireNonNull(film, "Cannot create film: is null");
+        if (film.getName() == null || film.getName().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Film name is empty");
         }
-        return likes.entrySet().stream()
-                .sorted(Comparator.comparing(e -> e.getValue().size(), reverseOrder()))
-                .map(entry -> filmRepository.getFilm(entry.getKey()))
-                .limit(count)
-                .collect(Collectors.toList());
+        if (film.getDescription() == null || film.getDescription().isEmpty() || film.getDescription().length() > 200) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Film description is empty");
+        }
+        if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "дата релиза - не раньше 28 декабря 1895 года");
+        }
+        if (film.getDuration() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "продолжительность фильма должна быть положительным числом");
+        }
+        if (!mpaService.getMpas().contains(film.getMpa())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mpa не найден");
+        }
+
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            for (Genre genre : film.getGenres()) {
+                if (!genreService.getGenres().contains(genre)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+                }
+            }
+        }
+
+        final Film filmStored = jdbcFilmRepository.save(film);
+        return filmStored;
+    }
+
+    public Optional<Film> updateFilm(final Film film) {
+        Objects.requireNonNull(film, "Cannot update film: is null");
+        final Optional<Film> filmStored = jdbcFilmRepository.update(film);
+        return filmStored;
+    }
+
+    public void addLike(final long id, final long userId) {
+        assertFilmExist(id);
+        assertUserExist(userId);
+        jdbcFilmRepository.addLike(id, userId);
+    }
+
+    public void deleteLike(final long id, final long userId) {
+        assertFilmExist(id);
+        assertUserExist(userId);
+        jdbcFilmRepository.deleteLike(id, userId);
+    }
+
+    private void assertFilmExist(final long id) {
+        jdbcFilmRepository.findById(id).orElseThrow(() -> new NotFoundException(Film.class, id));
+    }
+
+    private void assertUserExist(final long userId) {
+        userService.getUser(userId).orElseThrow(() -> new NotFoundException(User.class, userId));
     }
 }
 
